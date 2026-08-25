@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#16002b">
+  <title>SUPER AI</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">✦</div>
+      <div>
+        <strong>SUPER AI</strong>
+        <span>مساعدك الذكي</span>
+      </div>
+    </div>
+
+    <button class="new-chat" id="newChat">＋ محادثة جديدة</button>
+
+    <div class="history-title">المحادثات</div>
+    <div id="history" class="history"></div>
+
+    <div class="sidebar-bottom">
+      <div class="status"><span></span> متصل</div>
+      <div class="version">SUPER AI 1.0</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="القائمة">☰</button>
+      <div class="mobile-brand">SUPER AI</div>
+      <button class="icon-btn" id="clearBtn" title="مسح المحادثة">⌫</button>
+    </header>
+
+    <section class="chat" id="chat">
+      <div class="welcome" id="welcome">
+        <div class="hero-logo">✦</div>
+        <h1>مرحبًا بك في <span>SUPER AI</span></h1>
+        <p>اسألني عن أي شيء، وسأساعدك في الإجابة والبرمجة والكتابة وغير ذلك.</p>
+
+        <div class="suggestions">
+          <button data-prompt="اكتب لي فكرة مشروع ويب احترافي">💡 فكرة مشروع</button>
+          <button data-prompt="ساعدني في كتابة كود JavaScript">💻 برمجة</button>
+          <button data-prompt="اكتب لي بيانًا احترافيًا لتحديث تطبيق">✍️ كتابة</button>
+          <button data-prompt="اشرح لي الذكاء الاصطناعي بطريقة بسيطة">🧠 شرح</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="composer-wrap">
+      <form class="composer" id="form">
+        <textarea id="input" rows="1" placeholder="اكتب رسالتك هنا..." autocomplete="off"></textarea>
+        <button class="send" id="send" type="submit" aria-label="إرسال">➤</button>
+      </form>
+      <div class="notice">SUPER AI قد يخطئ أحيانًا، راجع المعلومات المهمة قبل الاعتماد عليها.</div>
+    </div>
+  </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
