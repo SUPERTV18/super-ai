@@ -71,8 +71,15 @@
       </div>
     </section>
     <div class="composer-wrap">
+      <div id="imagePreviewWrap" class="image-preview-wrap hidden">
+        <img id="imagePreviewImg" alt="معاينة الصورة">
+        <button type="button" id="removeImageBtn" aria-label="إزالة الصورة">✕</button>
+      </div>
       <form class="composer" id="form">
+        <button type="button" class="icon-attach" id="attachBtn" title="إرفاق صورة" aria-label="إرفاق صورة">📎</button>
+        <input type="file" id="fileInput" accept="image/*" hidden>
         <textarea id="input" rows="1" placeholder="اكتب رسالتك هنا..." autocomplete="off"></textarea>
+        <button type="button" class="icon-mic" id="micBtn" title="إدخال صوتي" aria-label="إدخال صوتي">🎤</button>
         <button class="send" id="send" type="submit" aria-label="إرسال">➤</button>
       </form>
       <div class="notice">SUPER AI قد يخطئ أحيانًا، راجع المعلومات المهمة قبل الاعتماد عليها.</div>
