@@ -10,6 +10,7 @@ const sidebar = document.getElementById("sidebar");
 const API_URL = "https://superg-ai-api.super-stv.workers.dev/";
 
 let messages = [];
+let currentConversationId = null;
 
 let conversations = JSON.parse(
   localStorage.getItem("superAIConversations") || "[]"
@@ -60,13 +61,14 @@ function save() {
 function renderHistory() {
   historyEl.innerHTML = "";
 
-  [...conversations].reverse().forEach((c, reverseIndex) => {
-    const index = conversations.length - 1 - reverseIndex;
-
+  [...conversations].reverse().forEach((c) => {
     const el = document.createElement("div");
     el.className = "history-item";
+    if (c.id === currentConversationId) {
+      el.classList.add("active");
+    }
     el.textContent = c.title || "محادثة جديدة";
-    el.onclick = () => loadConversation(index);
+    el.onclick = () => loadConversation(c.id);
 
     historyEl.appendChild(el);
   });
@@ -75,10 +77,14 @@ function renderHistory() {
 // =========================
 // تحميل محادثة
 // =========================
-function loadConversation(index) {
-  messages = conversations[index]?.messages || [];
+function loadConversation(id) {
+  const convo = conversations.find((c) => c.id === id);
+  currentConversationId = id;
+  messages = convo?.messages || [];
   renderMessages();
+  renderHistory();
   sidebar.classList.remove("open");
+  closeSidebarBackdrop();
 }
 
 // =========================
@@ -300,14 +306,7 @@ async function sendMessage(text) {
 
     messages.push({ role: "assistant", content: fullText });
 
-    const title =
-      messages.find((m) => m.role === "user")?.content?.slice(0, 45) ||
-      "محادثة جديدة";
-
-    conversations.push({ title, messages: [...messages] });
-    conversations = conversations.slice(-30);
-    save();
-    renderHistory();
+    saveCurrentConversation();
   } catch (error) {
     removeTyping();
     console.error("SUPER AI Error:", error);
@@ -324,6 +323,41 @@ async function sendMessage(text) {
     send.disabled = false;
     input.focus();
   }
+}
+
+// =========================
+// حفظ/تحديث المحادثة الحالية فقط (مش عنصر جديد كل رسالة)
+// =========================
+function saveCurrentConversation() {
+  const title =
+    messages.find((m) => m.role === "user")?.content?.slice(0, 45) ||
+    "محادثة جديدة";
+
+  if (currentConversationId === null) {
+    currentConversationId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    conversations.push({
+      id: currentConversationId,
+      title,
+      messages: [...messages],
+    });
+  } else {
+    const existing = conversations.find((c) => c.id === currentConversationId);
+    if (existing) {
+      existing.messages = [...messages];
+    } else {
+      conversations.push({ id: currentConversationId, title, messages: [...messages] });
+    }
+  }
+
+  if (conversations.length > 30) {
+    const removed = conversations.splice(0, conversations.length - 30);
+    if (removed.some((c) => c.id === currentConversationId)) {
+      currentConversationId = null;
+    }
+  }
+
+  save();
+  renderHistory();
 }
 
 // =========================
@@ -357,9 +391,12 @@ document.querySelectorAll(".suggestions button").forEach((btn) => {
 // =========================
 document.getElementById("newChat").onclick = () => {
   messages = [];
+  currentConversationId = null;
   renderMessages();
+  renderHistory();
   input.focus();
   sidebar.classList.remove("open");
+  closeSidebarBackdrop();
 };
 
 // =========================
@@ -367,16 +404,38 @@ document.getElementById("newChat").onclick = () => {
 // =========================
 document.getElementById("clearBtn").onclick = () => {
   messages = [];
+  currentConversationId = null;
   renderMessages();
+  renderHistory();
   input.focus();
 };
 
 // =========================
-// القائمة الجانبية
+// القائمة الجانبية (مع خلفية تقفل بالضغط عليها في الموبايل)
 // =========================
+const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+function openSidebarBackdrop() {
+  sidebarBackdrop?.classList.add("show");
+}
+
+function closeSidebarBackdrop() {
+  sidebarBackdrop?.classList.remove("show");
+}
+
 document.getElementById("menuBtn").onclick = () => {
-  sidebar.classList.toggle("open");
+  const isOpen = sidebar.classList.toggle("open");
+  if (isOpen) {
+    openSidebarBackdrop();
+  } else {
+    closeSidebarBackdrop();
+  }
 };
+
+sidebarBackdrop?.addEventListener("click", () => {
+  sidebar.classList.remove("open");
+  closeSidebarBackdrop();
+});
 
 // =========================
 // تشغيل سجل المحادثات
