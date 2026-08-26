@@ -12,16 +12,41 @@ const imagePreviewImg = document.getElementById("imagePreviewImg");
 const removeImageBtn = document.getElementById("removeImageBtn");
 const micBtn = document.getElementById("micBtn");
 
+// عناصر لوحة معاينة التصميم
+const previewOverlay = document.getElementById("previewOverlay");
+const previewFrame = document.getElementById("previewFrame");
+const previewCodeWrap = document.getElementById("previewCodeWrap");
+const previewCodeEl = document.getElementById("previewCodeEl");
+const tabPreviewBtn = document.getElementById("tabPreviewBtn");
+const tabCodeBtn = document.getElementById("tabCodeBtn");
+const previewCloseBtn = document.getElementById("previewCloseBtn");
+const previewCopyBtn = document.getElementById("previewCopyBtn");
+
 // رابط Cloudflare Worker
 const API_URL = "https://superg-ai-api.super-stv.workers.dev/";
 
 let messages = [];
 let currentConversationId = null;
 let pendingImageDataUrl = null;
+let voiceJustUsed = false;
 
 let conversations = JSON.parse(
   localStorage.getItem("superAIConversations") || "[]"
 );
+
+// =========================
+// كلمات مفتاحية لطلب توليد صورة
+// =========================
+const IMAGE_KEYWORDS = [
+  "ارسم", "اعمل صورة", "اعمل لي صورة", "انشئ صورة", "أنشئ صورة",
+  "ولد صورة", "ولّد صورة", "صورة لـ", "صور لي", "صمم صورة",
+  "generate an image", "generate image", "create an image", "draw a", "draw me",
+];
+
+function isImageRequest(text) {
+  const lower = text.toLowerCase();
+  return IMAGE_KEYWORDS.some((k) => lower.includes(k));
+}
 
 // =========================
 // إعداد محرك تنسيق الـ Markdown
@@ -36,7 +61,7 @@ if (window.marked) {
 function renderMarkdown(rawText) {
   if (!window.marked) return escapeHtml(rawText);
   const html = marked.parse(rawText || "");
-  return window.DOMPurify ? DOMPurify.sanitize(html) : html;
+  return window.DOMPurify ? DOMPurify.sanitize(html, { ADD_ATTR: ["target"] }) : html;
 }
 
 function escapeHtml(str) {
@@ -50,6 +75,103 @@ function highlightCodeBlocks(container) {
   container.querySelectorAll("pre code").forEach((block) => {
     hljs.highlightElement(block);
   });
+}
+
+// =========================
+// استخراج أكواد HTML من رد الذكاء الاصطناعي
+// =========================
+function extractHtmlBlocks(text) {
+  const regex = /```html\s*([\s\S]*?)```/gi;
+  const blocks = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    blocks.push(match[1].trim());
+  }
+  return blocks;
+}
+
+// =========================
+// لوحة معاينة التصميم
+// =========================
+function addDesignPreviewButton(box, htmlCode) {
+  const btn = document.createElement("button");
+  btn.className = "preview-design-btn";
+  btn.textContent = "🖥️ عرض التصميم";
+  btn.onclick = () => openDesignPreview(htmlCode);
+  box.appendChild(btn);
+}
+
+function openDesignPreview(htmlCode) {
+  previewFrame.srcdoc = htmlCode;
+  previewCodeEl.textContent = htmlCode;
+  previewOverlay.classList.remove("hidden");
+  switchPreviewTab("preview");
+}
+
+function switchPreviewTab(tab) {
+  const isPreview = tab === "preview";
+  previewFrame.classList.toggle("hidden", !isPreview);
+  previewCodeWrap.classList.toggle("hidden", isPreview);
+  tabPreviewBtn.classList.toggle("active", isPreview);
+  tabCodeBtn.classList.toggle("active", !isPreview);
+}
+
+tabPreviewBtn?.addEventListener("click", () => switchPreviewTab("preview"));
+tabCodeBtn?.addEventListener("click", () => switchPreviewTab("code"));
+
+previewCloseBtn?.addEventListener("click", () => {
+  previewOverlay.classList.add("hidden");
+  previewFrame.srcdoc = "";
+});
+
+previewCopyBtn?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(previewCodeEl.textContent);
+    previewCopyBtn.textContent = "تم النسخ ✓";
+  } catch {
+    previewCopyBtn.textContent = "تعذر النسخ";
+  }
+  setTimeout(() => {
+    previewCopyBtn.textContent = "نسخ الكود";
+  }, 1200);
+});
+
+// =========================
+// النطق الصوتي للردود (عبر خاصية المتصفح، مجانًا)
+// =========================
+function stripMarkdownForSpeech(md) {
+  return (md || "")
+    .replace(/```[\s\S]*?```/g, " كود برمجي ")
+    .replace(/!\[.*?\]\(.*?\)/g, " صورة ")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/[#*_`>~-]/g, "")
+    .trim();
+}
+
+function speakText(text) {
+  if (!window.speechSynthesis) {
+    alert("متصفحك لا يدعم خاصية النطق الصوتي.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(stripMarkdownForSpeech(text));
+  utterance.lang = "ar-SA";
+
+  const voices = window.speechSynthesis.getVoices();
+  const arabicVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ar"));
+  if (arabicVoice) utterance.voice = arabicVoice;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function addSpeakButton(box, getText) {
+  const btn = document.createElement("button");
+  btn.className = "speak-btn";
+  btn.textContent = "🔊 استماع";
+  btn.onclick = () => speakText(getText());
+  box.appendChild(btn);
 }
 
 // =========================
@@ -167,6 +289,20 @@ function renderUserContentWithImage(contentEl, contentArray) {
 }
 
 // =========================
+// إضافة الأزرار المصاحبة لرد الذكاء الاصطناعي (نسخ / استماع / عرض تصميم)
+// =========================
+function attachAssistantActions(box, contentEl, getText) {
+  highlightCodeBlocks(contentEl);
+  addCopyButton(box, getText);
+  addSpeakButton(box, getText);
+
+  const htmlBlocks = extractHtmlBlocks(getText());
+  if (htmlBlocks.length) {
+    addDesignPreviewButton(box, htmlBlocks[0]);
+  }
+}
+
+// =========================
 // إضافة رسالة (كاملة، غير متدفقة)
 // =========================
 function addMessage(role, content, animate = true, index = null) {
@@ -198,8 +334,7 @@ function addMessage(role, content, animate = true, index = null) {
   chat.appendChild(row);
 
   if (role === "assistant") {
-    highlightCodeBlocks(contentEl);
-    addCopyButton(box, () => content);
+    attachAssistantActions(box, contentEl, () => content);
   } else if (role === "user" && index !== null && !isImageMessage) {
     addEditButton(box, contentEl, index);
   }
@@ -250,7 +385,6 @@ function enterEditMode(box, contentEl, index, editBtn) {
     const newText = textarea.value.trim();
     if (!newText) return;
 
-    // نحذف الرسالة دي وكل اللي بعدها، ونبعتها تاني كأنها رسالة جديدة
     messages = messages.slice(0, index);
     wrap.remove();
     renderMessages();
@@ -326,15 +460,15 @@ function createStreamingBubble() {
 }
 
 // =========================
-// مؤشر التفكير (قبل وصول أول جزء من الرد)
+// مؤشر التفكير (نص قابل للتخصيص)
 // =========================
-function addTyping() {
+function addTyping(text) {
   const row = document.createElement("div");
   row.className = "message assistant";
   row.id = "typing";
   row.innerHTML =
     '<div class="avatar">✦</div>' +
-    '<div class="bubble typing">جاري التفكير...</div>';
+    `<div class="bubble typing">${text || "جاري التفكير..."}</div>`;
   chat.appendChild(row);
   chat.scrollTop = chat.scrollHeight;
 }
@@ -441,10 +575,72 @@ micBtn?.addEventListener("click", () => {
   recognition.onend = () => {
     isRecording = false;
     micBtn.classList.remove("recording");
+    if (finalTranscript.trim()) {
+      voiceJustUsed = true;
+    }
   };
 
   recognition.start();
 });
+
+// =========================
+// توليد صورة بالذكاء الاصطناعي
+// =========================
+async function sendImageGenerationRequest(text) {
+  if (send.disabled) return;
+
+  messages.push({ role: "user", content: text });
+  addMessage("user", text, true, messages.length - 1);
+
+  input.value = "";
+  autoSize();
+  send.disabled = true;
+  addTyping("جاري توليد الصورة...");
+
+  const isFirstExchange = messages.length === 1;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "image", prompt: text }),
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {}
+
+    removeTyping();
+
+    if (!res.ok || !data.image) {
+      throw new Error(data?.error || "تعذر توليد الصورة.");
+    }
+
+    const dataUrl = `data:image/jpeg;base64,${data.image}`;
+    const markdownContent = `تم توليد الصورة بنجاح:\n\n![صورة مولدة بالذكاء الاصطناعي](${dataUrl})`;
+
+    const { box, contentEl } = addMessage("assistant", markdownContent, true);
+    attachAssistantActions(box, contentEl, () => markdownContent);
+
+    messages.push({ role: "assistant", content: markdownContent });
+    saveCurrentConversation();
+
+    if (isFirstExchange) {
+      requestSmartTitle(currentConversationId, [...messages]);
+    }
+  } catch (error) {
+    removeTyping();
+    console.error("Image generation error:", error);
+    addMessage(
+      "assistant",
+      "❌ " + (error?.message || "تعذر توليد الصورة، حاول تاني.")
+    );
+  } finally {
+    send.disabled = false;
+    input.focus();
+  }
+}
 
 // =========================
 // إرسال الرسالة (مع بث الرد أول بأول)
@@ -455,6 +651,9 @@ async function sendMessage(text) {
 
   if (!text && !imageToSend) return;
   if (send.disabled) return;
+
+  const spokenReply = voiceJustUsed;
+  voiceJustUsed = false;
 
   let userContent;
   if (imageToSend) {
@@ -491,7 +690,6 @@ async function sendMessage(text) {
 
     const contentType = response.headers.get("content-type") || "";
 
-    // خطأ راجع كـ JSON عادي (مش بث)
     if (!response.ok || contentType.includes("application/json")) {
       let data = {};
       try {
@@ -517,7 +715,7 @@ async function sendMessage(text) {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop(); // آخر سطر ناقص، نحتفظ بيه للمرة الجاية
+      buffer = lines.pop();
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -541,10 +739,8 @@ async function sendMessage(text) {
       }
     }
 
-    // إزالة مؤشر الكتابة النابض وعرض الشكل النهائي المنسّق
     streamBubble.contentEl.innerHTML = renderMarkdown(fullText);
-    highlightCodeBlocks(streamBubble.contentEl);
-    addCopyButton(streamBubble.box, () => fullText);
+    attachAssistantActions(streamBubble.box, streamBubble.contentEl, () => fullText);
 
     if (!fullText.trim()) {
       throw new Error("لم يتم استلام رد من الذكاء الاصطناعي.");
@@ -556,6 +752,10 @@ async function sendMessage(text) {
 
     if (isFirstExchange) {
       requestSmartTitle(currentConversationId, [...messages]);
+    }
+
+    if (spokenReply) {
+      speakText(fullText);
     }
   } catch (error) {
     removeTyping();
@@ -603,7 +803,7 @@ async function requestSmartTitle(convoId, msgsSnapshot) {
 }
 
 // =========================
-// حفظ/تحديث المحادثة الحالية فقط (مش عنصر جديد كل رسالة)
+// حفظ/تحديث المحادثة الحالية فقط
 // =========================
 function getFallbackTitle() {
   const firstUserMsg = messages.find((m) => m.role === "user");
@@ -647,7 +847,12 @@ function saveCurrentConversation() {
     }
   }
 
-  save();
+  try {
+    save();
+  } catch (err) {
+    console.warn("تعذر حفظ المحادثة (مساحة التخزين ممتلئة على الأغلب):", err);
+  }
+
   renderHistory();
 }
 
@@ -656,7 +861,13 @@ function saveCurrentConversation() {
 // =========================
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  sendMessage(input.value);
+  const text = input.value.trim();
+
+  if (!pendingImageDataUrl && text && isImageRequest(text)) {
+    sendImageGenerationRequest(text);
+  } else {
+    sendMessage(input.value);
+  }
 });
 
 input.addEventListener("input", autoSize);
@@ -678,7 +889,7 @@ document.querySelectorAll(".suggestions button").forEach((btn) => {
 });
 
 // =========================
-// محادثة جديدة (مشتركة بين زر الشريط الجانبي وزر الموبايل)
+// محادثة جديدة
 // =========================
 function startNewChat() {
   messages = [];
@@ -697,7 +908,7 @@ document.getElementById("newChat").onclick = startNewChat;
 document.getElementById("mobileNewChatBtn").onclick = startNewChat;
 
 // =========================
-// القائمة الجانبية (مع خلفية تقفل بالضغط عليها في الموبايل)
+// القائمة الجانبية
 // =========================
 const sidebarBackdrop = document.getElementById("sidebarBackdrop");
 
