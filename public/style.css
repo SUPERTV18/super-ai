@@ -711,3 +711,123 @@ body{
     padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 }
+
+/* =========================
+   عناصر القائمة (حذف المحادثة)
+========================= */
+.history-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.history-title-text{
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-delete{
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.history-delete:hover{
+  opacity: 1;
+  color: #d64545;
+  background: rgba(214,69,69,0.1);
+}
+
+/* =========================
+   تعديل رسالة المستخدم
+========================= */
+.edit-msg-btn{
+  display: block;
+  margin-top: 7px;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.edit-msg-btn:hover{ color: var(--accent); }
+
+.edit-wrap{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.edit-textarea{
+  width: 100%;
+  min-width: 200px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+}
+
+.edit-textarea:focus{ border-color: var(--accent); }
+
+.edit-actions{
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.edit-save{
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edit-save:hover{ background: var(--accent-hover); }
+
+.edit-cancel{
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.edit-cancel:hover{ background: var(--accent-soft); }
+
+/* =========================
+   ارتفاع شاشة حقيقي على الموبايل (يتفادى مشاكل شريط عنوان المتصفح)
+========================= */
+html, body, .app, .main{
+  height: 100vh;
+  height: 100dvh;
+}
+
+@media (max-width: 860px){
+  .edit-wrap{ min-width: 0; }
+}
