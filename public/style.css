@@ -497,3 +497,116 @@ body{
 
   .suggestions{ grid-template-columns: 1fr; }
 }
+
+/* =========================
+   تنسيق محتوى الردود (Markdown)
+========================= */
+.msg-content{ width: 100%; }
+
+.msg-content p{ margin: 0 0 10px; }
+.msg-content p:last-child{ margin-bottom: 0; }
+
+.msg-content h1,
+.msg-content h2,
+.msg-content h3{
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  color: var(--text);
+  margin: 16px 0 8px;
+  line-height: 1.4;
+}
+
+.msg-content h1{ font-size: 19px; }
+.msg-content h2{ font-size: 17px; }
+.msg-content h3{ font-size: 15.5px; }
+
+.msg-content ul,
+.msg-content ol{
+  margin: 8px 0;
+  padding-inline-start: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.msg-content li{ line-height: 1.75; }
+
+.msg-content strong{ font-weight: 700; color: var(--text); }
+
+.msg-content a{
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.msg-content blockquote{
+  border-inline-start: 3px solid var(--accent);
+  margin: 10px 0;
+  padding: 4px 14px;
+  color: var(--text-dim);
+  background: var(--accent-soft);
+  border-radius: 6px;
+}
+
+.msg-content code{
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13px;
+  background: var(--accent-soft);
+  padding: 2px 6px;
+  border-radius: 5px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.msg-content pre{
+  background: #161b22;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 10px 0;
+  direction: ltr;
+  text-align: left;
+}
+
+.msg-content pre code{
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e6edf3;
+}
+
+.msg-content table{
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  font-size: 13.5px;
+}
+
+.msg-content th,
+.msg-content td{
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: right;
+}
+
+.msg-content th{
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.msg-content hr{
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+.cursor-blink{
+  display: inline-block;
+  color: var(--accent);
+  animation: blink 0.9s step-start infinite;
+}
+
+@keyframes blink{
+  50% { opacity: 0; }
+}
