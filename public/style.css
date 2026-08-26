@@ -847,3 +847,105 @@ html, body, .app, .main{
 @media (max-width: 860px){
   .edit-wrap{ min-width: 0; }
 }
+
+/* =========================
+   أزرار الإرفاق والمايك
+========================= */
+.icon-attach,
+.icon-mic{
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.icon-attach:hover,
+.icon-mic:hover{
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.icon-mic.recording{
+  color: #fff;
+  background: #d64545;
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse{
+  0%, 100% { box-shadow: 0 0 0 0 rgba(214,69,69,0.45); }
+  50%      { box-shadow: 0 0 0 8px rgba(214,69,69,0); }
+}
+
+/* =========================
+   معاينة الصورة قبل الإرسال
+========================= */
+.image-preview-wrap{
+  max-width: 700px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.image-preview-wrap.hidden{ display: none; }
+
+.image-preview-wrap img{
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.image-preview-wrap button{
+  margin-inline-start: auto;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.image-preview-wrap button:hover{ color: #d64545; }
+
+/* =========================
+   صورة داخل فقاعة الرسالة
+========================= */
+.msg-image{
+  max-width: 260px;
+  max-height: 260px;
+  border-radius: 12px;
+  display: block;
+  margin-bottom: 8px;
+  object-fit: cover;
+}
+
+.msg-image-caption{
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+@media (max-width: 860px){
+  .msg-image{
+    max-width: 200px;
+    max-height: 200px;
+  }
+
+  .icon-attach,
+  .icon-mic{
+    width: 32px;
+    height: 32px;
+    font-size: 14.5px;
+  }
+}
