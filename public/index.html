@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#16002b">
   <title>SUPER AI</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/auth.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
   <div class="app">
@@ -17,18 +19,16 @@
         <span>مساعدك الذكي</span>
       </div>
     </div>
-
     <button class="new-chat" id="newChat">＋ محادثة جديدة</button>
-
     <div class="history-title">المحادثات</div>
     <div id="history" class="history"></div>
-
     <div class="sidebar-bottom">
-      <div class="status"><span></span> متصل</div>
+      <div id="authStatus" class="auth-status">
+        <span class="status"><span></span> متصل</span>
+      </div>
       <div class="version">SUPER AI 1.0</div>
     </div>
   </aside>
-
   <main class="main">
     <header class="topbar">
       <button class="icon-btn" id="menuBtn" aria-label="القائمة">☰</button>
@@ -36,12 +36,16 @@
       <button class="icon-btn" id="clearBtn" title="مسح المحادثة">⌫</button>
     </header>
 
+    <div id="trialBanner" class="trial-banner hidden">
+      <span id="trialText"></span>
+      <button id="trialLoginBtn">سجّل دخول</button>
+    </div>
+
     <section class="chat" id="chat">
       <div class="welcome" id="welcome">
         <div class="hero-logo">✦</div>
         <h1>مرحبًا بك في <span>SUPER AI</span></h1>
         <p>اسألني عن أي شيء، وسأساعدك في الإجابة والبرمجة والكتابة وغير ذلك.</p>
-
         <div class="suggestions">
           <button data-prompt="اكتب لي فكرة مشروع ويب احترافي">💡 فكرة مشروع</button>
           <button data-prompt="ساعدني في كتابة كود JavaScript">💻 برمجة</button>
@@ -50,7 +54,6 @@
         </div>
       </div>
     </section>
-
     <div class="composer-wrap">
       <form class="composer" id="form">
         <textarea id="input" rows="1" placeholder="اكتب رسالتك هنا..." autocomplete="off"></textarea>
@@ -61,6 +64,34 @@
   </main>
   </div>
 
+  <!-- شاشة تسجيل الدخول / إنشاء حساب -->
+  <div id="authOverlay" class="auth-overlay hidden">
+    <div class="auth-card">
+      <div class="auth-logo">✦</div>
+      <h2 id="authTitle">سجّل دخولك للمتابعة</h2>
+      <p id="authSubtitle">انتهت فترة التجربة المجانية. سجّل دخولك أو أنشئ حساب مجاني للمتابعة.</p>
+
+      <button id="googleBtn" class="google-btn">
+        <span>المتابعة بحساب Google</span>
+      </button>
+
+      <div class="auth-divider"><span>أو</span></div>
+
+      <form id="authForm">
+        <input type="email" id="authEmail" placeholder="البريد الإلكتروني" required autocomplete="email">
+        <input type="password" id="authPassword" placeholder="كلمة المرور" required autocomplete="current-password" minlength="6">
+        <div id="authError" class="auth-error hidden"></div>
+        <button type="submit" id="authSubmitBtn" class="auth-submit">دخول</button>
+      </form>
+
+      <div class="auth-switch">
+        <span id="authSwitchText">معندكش حساب؟</span>
+        <button id="authSwitchBtn" type="button">إنشاء حساب جديد</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
