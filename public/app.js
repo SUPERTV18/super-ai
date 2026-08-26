@@ -67,11 +67,43 @@ function renderHistory() {
     if (c.id === currentConversationId) {
       el.classList.add("active");
     }
-    el.textContent = c.title || "محادثة جديدة";
-    el.onclick = () => loadConversation(c.id);
 
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "history-title-text";
+    titleSpan.textContent = c.title || "محادثة جديدة";
+    titleSpan.onclick = () => loadConversation(c.id);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "history-delete";
+    delBtn.setAttribute("aria-label", "حذف المحادثة");
+    delBtn.textContent = "🗑";
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      deleteConversation(c.id);
+    };
+
+    el.append(titleSpan, delBtn);
     historyEl.appendChild(el);
   });
+}
+
+// =========================
+// حذف محادثة
+// =========================
+function deleteConversation(id) {
+  const sure = confirm("متأكد إنك عايز تحذف المحادثة دي؟ الإجراء ده مش هيتراجع.");
+  if (!sure) return;
+
+  conversations = conversations.filter((c) => c.id !== id);
+  save();
+
+  if (currentConversationId === id) {
+    messages = [];
+    currentConversationId = null;
+    renderMessages();
+  }
+
+  renderHistory();
 }
 
 // =========================
@@ -95,8 +127,8 @@ function renderMessages() {
 
   chat.querySelectorAll(".message").forEach((x) => x.remove());
 
-  messages.forEach((m) => {
-    addMessage(m.role, m.content, false);
+  messages.forEach((m, i) => {
+    addMessage(m.role, m.content, false, i);
   });
 
   requestAnimationFrame(() => {
@@ -107,7 +139,7 @@ function renderMessages() {
 // =========================
 // إضافة رسالة (كاملة، غير متدفقة)
 // =========================
-function addMessage(role, content, animate = true) {
+function addMessage(role, content, animate = true, index = null) {
   const row = document.createElement("div");
   row.className = `message ${role}`;
 
@@ -134,6 +166,8 @@ function addMessage(role, content, animate = true) {
   if (role === "assistant") {
     highlightCodeBlocks(contentEl);
     addCopyButton(box, () => content);
+  } else if (role === "user" && index !== null) {
+    addEditButton(box, contentEl, index);
   }
 
   if (animate) {
@@ -141,6 +175,71 @@ function addMessage(role, content, animate = true) {
   }
 
   return { row, box, contentEl };
+}
+
+// =========================
+// زر تعديل رسالة المستخدم
+// =========================
+function addEditButton(box, contentEl, index) {
+  const editBtn = document.createElement("button");
+  editBtn.className = "edit-msg-btn";
+  editBtn.textContent = "✎ تعديل";
+  editBtn.onclick = () => enterEditMode(box, contentEl, index, editBtn);
+  box.appendChild(editBtn);
+}
+
+function enterEditMode(box, contentEl, index, editBtn) {
+  const originalText = messages[index]?.content ?? "";
+
+  contentEl.style.display = "none";
+  editBtn.style.display = "none";
+
+  const wrap = document.createElement("div");
+  wrap.className = "edit-wrap";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "edit-textarea";
+  textarea.value = originalText;
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "edit-save";
+  saveBtn.textContent = "حفظ وإرسال";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "edit-cancel";
+  cancelBtn.textContent = "إلغاء";
+
+  saveBtn.onclick = () => {
+    const newText = textarea.value.trim();
+    if (!newText) return;
+
+    // نحذف الرسالة دي وكل اللي بعدها، ونبعتها تاني كأنها رسالة جديدة
+    messages = messages.slice(0, index);
+    wrap.remove();
+    renderMessages();
+    sendMessage(newText);
+  };
+
+  cancelBtn.onclick = () => {
+    wrap.remove();
+    contentEl.style.display = "";
+    editBtn.style.display = "";
+  };
+
+  actions.append(saveBtn, cancelBtn);
+  wrap.append(textarea, actions);
+  box.appendChild(wrap);
+
+  textarea.focus();
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
+  textarea.addEventListener("input", () => {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+  });
 }
 
 // =========================
@@ -226,7 +325,7 @@ async function sendMessage(text) {
   if (!text || send.disabled) return;
 
   messages.push({ role: "user", content: text });
-  addMessage("user", text);
+  addMessage("user", text, true, messages.length - 1);
 
   input.value = "";
   autoSize();
