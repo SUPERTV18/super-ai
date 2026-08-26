@@ -114,6 +114,26 @@
     </div>
   </div>
 
+  <!-- لوحة معاينة التصميم -->
+  <div id="previewOverlay" class="preview-overlay hidden">
+    <div class="preview-panel">
+      <div class="preview-header">
+        <div class="preview-tabs">
+          <button class="preview-tab active" id="tabPreviewBtn" data-tab="preview">👁️ معاينة</button>
+          <button class="preview-tab" id="tabCodeBtn" data-tab="code">﹁ الكود</button>
+        </div>
+        <div class="preview-header-actions">
+          <button id="previewCopyBtn" class="preview-action-btn">نسخ الكود</button>
+          <button id="previewCloseBtn" class="preview-action-btn preview-close">✕</button>
+        </div>
+      </div>
+      <div class="preview-body">
+        <iframe id="previewFrame" class="preview-frame" title="معاينة التصميم" sandbox="allow-scripts"></iframe>
+        <pre id="previewCodeWrap" class="preview-code-wrap hidden"><code id="previewCodeEl"></code></pre>
+      </div>
+    </div>
+  </div>
+
   <script src="/theme.js"></script>
   <script src="/auth.js"></script>
   <script src="/app.js"></script>
