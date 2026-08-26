@@ -5,12 +5,19 @@ const send = document.getElementById("send");
 const welcome = document.getElementById("welcome");
 const historyEl = document.getElementById("history");
 const sidebar = document.getElementById("sidebar");
+const attachBtn = document.getElementById("attachBtn");
+const fileInput = document.getElementById("fileInput");
+const imagePreviewWrap = document.getElementById("imagePreviewWrap");
+const imagePreviewImg = document.getElementById("imagePreviewImg");
+const removeImageBtn = document.getElementById("removeImageBtn");
+const micBtn = document.getElementById("micBtn");
 
 // رابط Cloudflare Worker
 const API_URL = "https://superg-ai-api.super-stv.workers.dev/";
 
 let messages = [];
 let currentConversationId = null;
+let pendingImageDataUrl = null;
 
 let conversations = JSON.parse(
   localStorage.getItem("superAIConversations") || "[]"
@@ -137,6 +144,29 @@ function renderMessages() {
 }
 
 // =========================
+// عرض محتوى رسالة فيها صورة (نص + صورة)
+// =========================
+function renderUserContentWithImage(contentEl, contentArray) {
+  const textPart = contentArray.find((c) => c.type === "text")?.text || "";
+  const imagePart = contentArray.find((c) => c.type === "image_url")?.image_url?.url;
+
+  if (imagePart) {
+    const img = document.createElement("img");
+    img.src = imagePart;
+    img.className = "msg-image";
+    img.alt = "صورة مرفقة";
+    contentEl.appendChild(img);
+  }
+
+  if (textPart) {
+    const p = document.createElement("div");
+    p.className = "msg-image-caption";
+    p.textContent = textPart;
+    contentEl.appendChild(p);
+  }
+}
+
+// =========================
 // إضافة رسالة (كاملة، غير متدفقة)
 // =========================
 function addMessage(role, content, animate = true, index = null) {
@@ -153,8 +183,12 @@ function addMessage(role, content, animate = true, index = null) {
   const contentEl = document.createElement("div");
   contentEl.className = "msg-content";
 
+  const isImageMessage = Array.isArray(content);
+
   if (role === "assistant") {
     contentEl.innerHTML = renderMarkdown(content);
+  } else if (isImageMessage) {
+    renderUserContentWithImage(contentEl, content);
   } else {
     contentEl.textContent = content;
   }
@@ -166,7 +200,7 @@ function addMessage(role, content, animate = true, index = null) {
   if (role === "assistant") {
     highlightCodeBlocks(contentEl);
     addCopyButton(box, () => content);
-  } else if (role === "user" && index !== null) {
+  } else if (role === "user" && index !== null && !isImageMessage) {
     addEditButton(box, contentEl, index);
   }
 
@@ -199,7 +233,7 @@ function enterEditMode(box, contentEl, index, editBtn) {
 
   const textarea = document.createElement("textarea");
   textarea.className = "edit-textarea";
-  textarea.value = originalText;
+  textarea.value = typeof originalText === "string" ? originalText : "";
 
   const actions = document.createElement("div");
   actions.className = "edit-actions";
@@ -318,22 +352,135 @@ function autoSize() {
 }
 
 // =========================
+// رفع صورة
+// =========================
+attachBtn?.addEventListener("click", () => fileInput.click());
+
+fileInput?.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("الرجاء اختيار ملف صورة فقط.");
+    fileInput.value = "";
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("حجم الصورة كبير جدًا. الحد الأقصى 5 ميجابايت.");
+    fileInput.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingImageDataUrl = reader.result;
+    imagePreviewImg.src = pendingImageDataUrl;
+    imagePreviewWrap.classList.remove("hidden");
+  };
+  reader.readAsDataURL(file);
+  fileInput.value = "";
+});
+
+removeImageBtn?.addEventListener("click", () => {
+  pendingImageDataUrl = null;
+  imagePreviewImg.src = "";
+  imagePreviewWrap.classList.add("hidden");
+});
+
+// =========================
+// الإدخال الصوتي
+// =========================
+let recognition = null;
+let isRecording = false;
+
+micBtn?.addEventListener("click", () => {
+  const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognitionApi) {
+    alert("متصفحك لا يدعم التعرف على الصوت. جرّب Google Chrome.");
+    return;
+  }
+
+  if (isRecording) {
+    recognition?.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognitionApi();
+  recognition.lang = "ar-EG";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  let finalTranscript = "";
+
+  recognition.onstart = () => {
+    isRecording = true;
+    micBtn.classList.add("recording");
+  };
+
+  recognition.onresult = (event) => {
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcriptPiece = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcriptPiece;
+      } else {
+        interim += transcriptPiece;
+      }
+    }
+    input.value = (finalTranscript + interim).trim();
+    autoSize();
+  };
+
+  recognition.onerror = () => {
+    isRecording = false;
+    micBtn.classList.remove("recording");
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    micBtn.classList.remove("recording");
+  };
+
+  recognition.start();
+});
+
+// =========================
 // إرسال الرسالة (مع بث الرد أول بأول)
 // =========================
 async function sendMessage(text) {
-  text = text.trim();
-  if (!text || send.disabled) return;
+  text = (text || "").trim();
+  const imageToSend = pendingImageDataUrl;
 
-  messages.push({ role: "user", content: text });
-  addMessage("user", text, true, messages.length - 1);
+  if (!text && !imageToSend) return;
+  if (send.disabled) return;
+
+  let userContent;
+  if (imageToSend) {
+    userContent = [
+      { type: "text", text: text || "صف هذه الصورة بالتفصيل." },
+      { type: "image_url", image_url: { url: imageToSend } },
+    ];
+  } else {
+    userContent = text;
+  }
+
+  messages.push({ role: "user", content: userContent });
+  addMessage("user", userContent, true, messages.length - 1);
 
   input.value = "";
   autoSize();
+  pendingImageDataUrl = null;
+  imagePreviewImg.src = "";
+  imagePreviewWrap.classList.add("hidden");
+
   send.disabled = true;
   addTyping();
 
   let fullText = "";
   let streamBubble = null;
+  const isFirstExchange = messages.length === 1;
 
   try {
     const response = await fetch(API_URL, {
@@ -406,6 +553,10 @@ async function sendMessage(text) {
     messages.push({ role: "assistant", content: fullText });
 
     saveCurrentConversation();
+
+    if (isFirstExchange) {
+      requestSmartTitle(currentConversationId, [...messages]);
+    }
   } catch (error) {
     removeTyping();
     console.error("SUPER AI Error:", error);
@@ -425,12 +576,53 @@ async function sendMessage(text) {
 }
 
 // =========================
+// طلب عنوان ذكي للمحادثة من الذكاء الاصطناعي
+// =========================
+async function requestSmartTitle(convoId, msgsSnapshot) {
+  if (!convoId) return;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "title", messages: msgsSnapshot }),
+    });
+
+    const data = await res.json();
+    if (data?.title) {
+      const convo = conversations.find((c) => c.id === convoId);
+      if (convo) {
+        convo.title = data.title;
+        save();
+        renderHistory();
+      }
+    }
+  } catch (err) {
+    console.warn("تعذر توليد عنوان ذكي:", err);
+  }
+}
+
+// =========================
 // حفظ/تحديث المحادثة الحالية فقط (مش عنصر جديد كل رسالة)
 // =========================
+function getFallbackTitle() {
+  const firstUserMsg = messages.find((m) => m.role === "user");
+  if (!firstUserMsg) return "محادثة جديدة";
+
+  if (typeof firstUserMsg.content === "string") {
+    return firstUserMsg.content.slice(0, 45) || "محادثة جديدة";
+  }
+
+  if (Array.isArray(firstUserMsg.content)) {
+    const textPart = firstUserMsg.content.find((c) => c.type === "text")?.text;
+    return textPart ? textPart.slice(0, 45) : "📷 صورة";
+  }
+
+  return "محادثة جديدة";
+}
+
 function saveCurrentConversation() {
-  const title =
-    messages.find((m) => m.role === "user")?.content?.slice(0, 45) ||
-    "محادثة جديدة";
+  const title = getFallbackTitle();
 
   if (currentConversationId === null) {
     currentConversationId = Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -491,6 +683,9 @@ document.querySelectorAll(".suggestions button").forEach((btn) => {
 function startNewChat() {
   messages = [];
   currentConversationId = null;
+  pendingImageDataUrl = null;
+  imagePreviewImg.src = "";
+  imagePreviewWrap.classList.add("hidden");
   renderMessages();
   renderHistory();
   input.focus();
