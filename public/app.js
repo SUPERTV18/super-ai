@@ -486,9 +486,9 @@ document.querySelectorAll(".suggestions button").forEach((btn) => {
 });
 
 // =========================
-// محادثة جديدة
+// محادثة جديدة (مشتركة بين زر الشريط الجانبي وزر الموبايل)
 // =========================
-document.getElementById("newChat").onclick = () => {
+function startNewChat() {
   messages = [];
   currentConversationId = null;
   renderMessages();
@@ -496,18 +496,10 @@ document.getElementById("newChat").onclick = () => {
   input.focus();
   sidebar.classList.remove("open");
   closeSidebarBackdrop();
-};
+}
 
-// =========================
-// مسح المحادثة الحالية
-// =========================
-document.getElementById("clearBtn").onclick = () => {
-  messages = [];
-  currentConversationId = null;
-  renderMessages();
-  renderHistory();
-  input.focus();
-};
+document.getElementById("newChat").onclick = startNewChat;
+document.getElementById("mobileNewChatBtn").onclick = startNewChat;
 
 // =========================
 // القائمة الجانبية (مع خلفية تقفل بالضغط عليها في الموبايل)
