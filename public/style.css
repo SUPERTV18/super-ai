@@ -610,3 +610,104 @@ body{
 @keyframes blink{
   50% { opacity: 0; }
 }
+
+/* =========================
+   المحادثة النشطة في القائمة
+========================= */
+.history-item.active{
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* =========================
+   خلفية إغلاق القائمة الجانبية (موبايل)
+========================= */
+.sidebar-backdrop{
+  display: none;
+}
+
+/* =========================
+   تحسينات الموبايل الشاملة
+========================= */
+@media (max-width: 860px){
+  .sidebar-backdrop.show{
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 40;
+  }
+
+  .sidebar{
+    inset: 0 24% 0 0;
+    max-width: 320px;
+  }
+
+  .brand strong{ font-size: 15px; }
+
+  .welcome{ padding: 14px; }
+
+  .hero-logo{
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+
+  .welcome h1{ font-size: 19px; }
+  .welcome p{ font-size: 13px; margin-bottom: 18px; }
+
+  .message{ max-width: 100%; gap: 8px; }
+
+  .avatar{
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+    border-radius: 8px;
+  }
+
+  .bubble{
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .msg-content pre{
+    padding: 10px;
+    font-size: 12.5px;
+  }
+
+  .composer{
+    border-radius: 14px;
+  }
+
+  .composer textarea{
+    font-size: 16px; /* يمنع تكبير الصفحة تلقائياً في iOS عند الكتابة */
+  }
+
+  .send{
+    width: 34px;
+    height: 34px;
+  }
+
+  .notice{
+    font-size: 10px;
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 420px){
+  .chat{ padding: 14px 4%; }
+  .composer-wrap{ padding: 8px 3% 12px; }
+  .suggestions button{ font-size: 12.5px; padding: 11px; }
+}
+
+/* دعم مساحة الأمان في هواتف الشاشة الكاملة (iPhone notch) */
+@supports (padding: max(0px)){
+  .composer-wrap{
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  .sidebar{
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+}
