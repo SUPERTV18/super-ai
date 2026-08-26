@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#16002b">
   <title>SUPER AI</title>
+  <script>
+    (function(){
+      var saved = localStorage.getItem("superAI_theme");
+      var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/auth.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -18,6 +25,10 @@
         <strong>SUPER AI</strong>
         <span>مساعدك الذكي</span>
       </div>
+      <button id="themeToggle" class="theme-toggle" aria-label="تبديل الوضع الداكن">
+        <span class="theme-icon-light">☀️</span>
+        <span class="theme-icon-dark">🌙</span>
+      </button>
     </div>
     <button class="new-chat" id="newChat">＋ محادثة جديدة</button>
     <div class="history-title">المحادثات</div>
@@ -91,6 +102,7 @@
     </div>
   </div>
 
+  <script src="/theme.js"></script>
   <script src="/auth.js"></script>
   <script src="/app.js"></script>
 </body>
