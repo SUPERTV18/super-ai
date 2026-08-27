@@ -28,7 +28,6 @@ const API_URL = "https://superg-ai-api.super-stv.workers.dev/";
 let messages = [];
 let currentConversationId = null;
 let pendingImageDataUrl = null;
-let voiceJustUsed = false;
 
 let conversations = JSON.parse(
   localStorage.getItem("superAIConversations") || "[]"
@@ -258,7 +257,7 @@ function renderMessages() {
   chat.querySelectorAll(".message").forEach((x) => x.remove());
 
   messages.forEach((m, i) => {
-    addMessage(m.role, m.content, false, i);
+    addMessage(m.role, m.content, false, i, m.voice === true);
   });
 
   requestAnimationFrame(() => {
@@ -306,7 +305,7 @@ function attachAssistantActions(box, contentEl, getText) {
 // =========================
 // إضافة رسالة (كاملة، غير متدفقة)
 // =========================
-function addMessage(role, content, animate = true, index = null) {
+function addMessage(role, content, animate = true, index = null, isVoice = false) {
   const row = document.createElement("div");
   row.className = `message ${role}`;
 
@@ -315,14 +314,16 @@ function addMessage(role, content, animate = true, index = null) {
   avatar.textContent = role === "user" ? "أنت" : "✦";
 
   const box = document.createElement("div");
-  box.className = "bubble";
+  box.className = "bubble" + (isVoice ? " voice-bubble" : "");
 
   const contentEl = document.createElement("div");
   contentEl.className = "msg-content";
 
   const isImageMessage = Array.isArray(content);
 
-  if (role === "assistant") {
+  if (isVoice) {
+    renderVoiceBubbleContent(contentEl, role, content);
+  } else if (role === "assistant") {
     contentEl.innerHTML = renderMarkdown(content);
   } else if (isImageMessage) {
     renderUserContentWithImage(contentEl, content);
@@ -334,7 +335,9 @@ function addMessage(role, content, animate = true, index = null) {
   row.append(avatar, box);
   chat.appendChild(row);
 
-  if (role === "assistant") {
+  if (isVoice) {
+    // مفيش أزرار تعديل أو نسخ للرسائل الصوتية، بس زر إعادة الاستماع (متضمّن فوق)
+  } else if (role === "assistant") {
     attachAssistantActions(box, contentEl, () => content);
   } else if (role === "user" && index !== null && !isImageMessage) {
     addEditButton(box, contentEl, index);
@@ -345,6 +348,29 @@ function addMessage(role, content, animate = true, index = null) {
   }
 
   return { row, box, contentEl };
+}
+
+// =========================
+// عرض فقاعة "رسالة صوتية" بدون إظهار أي نص
+// =========================
+function renderVoiceBubbleContent(contentEl, role, textForReplay) {
+  const icon = document.createElement("span");
+  icon.className = "voice-icon";
+  icon.textContent = role === "user" ? "🎤" : "🔊";
+
+  const label = document.createElement("span");
+  label.className = "voice-label";
+  label.textContent = role === "user" ? "رسالة صوتية" : "ردّ صوتي";
+
+  contentEl.append(icon, label);
+
+  if (role === "assistant") {
+    const playBtn = document.createElement("button");
+    playBtn.className = "voice-replay-btn";
+    playBtn.textContent = "▶ إعادة الاستماع";
+    playBtn.onclick = () => speakText(textForReplay);
+    contentEl.appendChild(playBtn);
+  }
 }
 
 // =========================
@@ -524,65 +550,119 @@ removeImageBtn?.addEventListener("click", () => {
 });
 
 // =========================
-// الإدخال الصوتي
+// الوضع الصوتي الكامل: تسجيل → إرسال → رد صوتي (بدون كتابة)
 // =========================
-let recognition = null;
-let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let mediaStream = null;
+let isRecordingVoice = false;
 
-micBtn?.addEventListener("click", () => {
-  const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
-  if (!SpeechRecognitionApi) {
-    alert("متصفحك لا يدعم التعرف على الصوت. جرّب Google Chrome.");
+micBtn?.addEventListener("click", async () => {
+  if (isRecordingVoice) {
+    mediaRecorder?.stop();
     return;
   }
 
-  if (isRecording) {
-    recognition?.stop();
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert("متصفحك لا يدعم تسجيل الصوت.");
     return;
   }
 
-  recognition = new SpeechRecognitionApi();
-  recognition.lang = "ar-EG";
-  recognition.continuous = false;
-  recognition.interimResults = true;
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    alert("محتاجين إذن استخدام الميكروفون عشان نقدر نسجل صوتك.");
+    return;
+  }
 
-  let finalTranscript = "";
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(mediaStream);
 
-  recognition.onstart = () => {
-    isRecording = true;
-    micBtn.classList.add("recording");
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) audioChunks.push(e.data);
   };
 
-  recognition.onresult = (event) => {
-    let interim = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcriptPiece = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += transcriptPiece;
-      } else {
-        interim += transcriptPiece;
-      }
-    }
-    input.value = (finalTranscript + interim).trim();
-    autoSize();
-  };
-
-  recognition.onerror = () => {
-    isRecording = false;
+  mediaRecorder.onstop = () => {
+    isRecordingVoice = false;
     micBtn.classList.remove("recording");
-  };
+    mediaStream?.getTracks().forEach((t) => t.stop());
 
-  recognition.onend = () => {
-    isRecording = false;
-    micBtn.classList.remove("recording");
-    if (finalTranscript.trim()) {
-      voiceJustUsed = true;
+    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+    if (audioBlob.size > 500) {
+      sendVoiceMessage(audioBlob);
     }
   };
 
-  recognition.start();
+  mediaRecorder.start();
+  isRecordingVoice = true;
+  micBtn.classList.add("recording");
 });
+
+async function sendVoiceMessage(audioBlob) {
+  if (send.disabled) return;
+  send.disabled = true;
+
+  // نعرض فقاعة "رسالة صوتية" فورًا من غير ما ننتظر تحويلها لنص
+  const placeholderIndex = messages.length;
+  messages.push({ role: "user", content: "[رسالة صوتية]", voice: true });
+  addMessage("user", "[رسالة صوتية]", true, null, true);
+
+  addTyping("جاري الاستماع...");
+
+  try {
+    const base64Audio = await blobToBase64(audioBlob);
+
+    const history = messages
+      .filter((m) => typeof m.content === "string" && !m.voice)
+      .slice(-10)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "voice", audio: base64Audio, history }),
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {}
+
+    removeTyping();
+
+    if (!res.ok || !data.reply) {
+      throw new Error(data?.error || "تعذر معالجة الرسالة الصوتية.");
+    }
+
+    // نحدّث محتوى رسالة المستخدم بالنص الحقيقي (للسياق فقط، مش للعرض)
+    messages[placeholderIndex].content = data.transcript || "[رسالة صوتية]";
+
+    messages.push({ role: "assistant", content: data.reply, voice: true });
+    addMessage("assistant", data.reply, true, null, true);
+
+    speakText(data.reply);
+    saveCurrentConversation();
+
+    if (messages.length === 2) {
+      requestSmartTitle(currentConversationId, [...messages]);
+    }
+  } catch (error) {
+    removeTyping();
+    console.error("Voice message error:", error);
+    addMessage("assistant", "❌ " + (error?.message || "تعذر معالجة الرسالة الصوتية."));
+  } finally {
+    send.disabled = false;
+  }
+}
 
 // =========================
 // توليد صورة بالذكاء الاصطناعي
@@ -652,9 +732,6 @@ async function sendMessage(text) {
 
   if (!text && !imageToSend) return;
   if (send.disabled) return;
-
-  const spokenReply = voiceJustUsed;
-  voiceJustUsed = false;
 
   let userContent;
   if (imageToSend) {
@@ -753,10 +830,6 @@ async function sendMessage(text) {
 
     if (isFirstExchange) {
       requestSmartTitle(currentConversationId, [...messages]);
-    }
-
-    if (spokenReply) {
-      speakText(fullText);
     }
   } catch (error) {
     removeTyping();
