@@ -1107,3 +1107,41 @@ html, body, .app, .main{
     font-size: 12px;
   }
 }
+
+/* =========================
+   فقاعة الرسالة الصوتية (بدون كتابة)
+========================= */
+.voice-bubble .msg-content{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-icon{
+  font-size: 16px;
+}
+
+.voice-label{
+  font-size: 13.5px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.voice-replay-btn{
+  background: var(--accent-soft);
+  border: 1px solid rgba(201,100,66,0.3);
+  color: var(--accent);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.voice-replay-btn:hover{ background: var(--accent); color: #fff; }
+
+.icon-mic.recording{
+  color: #fff;
+  background: #d64545;
+}
