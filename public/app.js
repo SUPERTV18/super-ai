@@ -39,7 +39,6 @@ let conversations = JSON.parse(
 const IMAGE_KEYWORDS = [
   "ارسم", "اعمل صورة", "اعمل لي صورة", "انشئ صورة", "أنشئ صورة",
   "ولد صورة", "ولّد صورة", "صورة لـ", "صور لي", "صمم صورة",
-  "لوجو", "شعار", "أيقونة", "ايقونة", "design a logo", "logo design", "create a logo",
   "generate an image", "generate image", "create an image", "draw a", "draw me",
 ];
 
@@ -760,7 +759,7 @@ async function sendImageGenerationRequest(text) {
     }
 
     const dataUrl = `data:image/jpeg;base64,${data.image}`;
-    const markdownContent = `تم توليد الصورة بنجاح:\n\n![صورة مولدة بالذكاء الاصطناعي](${dataUrl})`;
+    const markdownContent = `تم توليد الصورة بنجاح:\n\n![صورة مولدة بالذكاء الاصطناعي](${dataUrl})\n\n> ملحوظة: النماذج المجانية لتوليد الصور أحيانًا بترسم أي نص داخل الصورة (زي اسم العلامة) بشكل مشوّه. لو النص مش واضح، يفضل تاخد الرمز/الشكل كنقطة بداية وتضيف الاسم بخط واضح في برنامج تصميم.`;
 
     const { box, contentEl } = addMessage("assistant", markdownContent, true);
     attachAssistantActions(box, contentEl, () => markdownContent);
