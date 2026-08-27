@@ -40,6 +40,7 @@ let conversations = JSON.parse(
 const IMAGE_KEYWORDS = [
   "ارسم", "اعمل صورة", "اعمل لي صورة", "انشئ صورة", "أنشئ صورة",
   "ولد صورة", "ولّد صورة", "صورة لـ", "صور لي", "صمم صورة",
+  "لوجو", "شعار", "أيقونة", "ايقونة", "design a logo", "logo design", "create a logo",
   "generate an image", "generate image", "create an image", "draw a", "draw me",
 ];
 
