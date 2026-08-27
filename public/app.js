@@ -148,20 +148,53 @@ function stripMarkdownForSpeech(md) {
     .trim();
 }
 
-function speakText(text) {
+let cachedVoices = [];
+
+function loadVoices() {
+  return new Promise((resolve) => {
+    const existing = window.speechSynthesis?.getVoices() || [];
+    if (existing.length) {
+      resolve(existing);
+      return;
+    }
+    if (!window.speechSynthesis) {
+      resolve([]);
+      return;
+    }
+    window.speechSynthesis.onvoiceschanged = () => {
+      resolve(window.speechSynthesis.getVoices());
+    };
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 800);
+  });
+}
+
+async function speakText(text) {
   if (!window.speechSynthesis) {
     alert("متصفحك لا يدعم خاصية النطق الصوتي.");
     return;
   }
 
+  const plain = stripMarkdownForSpeech(text);
+  if (!plain) return;
+
   window.speechSynthesis.cancel();
 
-  const utterance = new SpeechSynthesisUtterance(stripMarkdownForSpeech(text));
-  utterance.lang = "ar-SA";
+  if (!cachedVoices.length) {
+    cachedVoices = await loadVoices();
+  }
 
-  const voices = window.speechSynthesis.getVoices();
-  const arabicVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ar"));
-  if (arabicVoice) utterance.voice = arabicVoice;
+  const utterance = new SpeechSynthesisUtterance(plain);
+  const arabicVoice = cachedVoices.find((v) => v.lang && v.lang.toLowerCase().startsWith("ar"));
+
+  if (arabicVoice) {
+    utterance.voice = arabicVoice;
+    utterance.lang = arabicVoice.lang;
+  }
+  // لو مفيش صوت عربي متاح على الجهاز، نسيب الإعداد الافتراضي بدل ما نمنع الصوت خالص
+
+  utterance.onerror = (e) => {
+    console.error("Speech synthesis error:", e);
+  };
 
   window.speechSynthesis.speak(utterance);
 }
@@ -370,6 +403,22 @@ function renderVoiceBubbleContent(contentEl, role, textForReplay) {
     playBtn.textContent = "▶ إعادة الاستماع";
     playBtn.onclick = () => speakText(textForReplay);
     contentEl.appendChild(playBtn);
+
+    const showTextBtn = document.createElement("button");
+    showTextBtn.className = "voice-show-text-btn";
+    showTextBtn.textContent = "📝 عرض النص";
+
+    const textReveal = document.createElement("div");
+    textReveal.className = "voice-text-reveal hidden";
+    textReveal.textContent = textForReplay;
+
+    showTextBtn.onclick = () => {
+      const isHidden = textReveal.classList.toggle("hidden");
+      showTextBtn.textContent = isHidden ? "📝 عرض النص" : "🙈 إخفاء النص";
+    };
+
+    contentEl.appendChild(showTextBtn);
+    contentEl.appendChild(textReveal);
   }
 }
 
@@ -566,14 +615,25 @@ function blobToBase64(blob) {
   });
 }
 
+function pickSupportedMimeType() {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+  ];
+  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+  return candidates.find((c) => MediaRecorder.isTypeSupported(c)) || "";
+}
+
 micBtn?.addEventListener("click", async () => {
   if (isRecordingVoice) {
     mediaRecorder?.stop();
     return;
   }
 
-  if (!navigator.mediaDevices?.getUserMedia) {
-    alert("متصفحك لا يدعم تسجيل الصوت.");
+  if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
+    alert("متصفحك لا يدعم تسجيل الصوت. جرّب Google Chrome.");
     return;
   }
 
@@ -585,7 +645,8 @@ micBtn?.addEventListener("click", async () => {
   }
 
   audioChunks = [];
-  mediaRecorder = new MediaRecorder(mediaStream);
+  const mimeType = pickSupportedMimeType();
+  mediaRecorder = mimeType ? new MediaRecorder(mediaStream, { mimeType }) : new MediaRecorder(mediaStream);
 
   mediaRecorder.ondataavailable = (e) => {
     if (e.data.size > 0) audioChunks.push(e.data);
