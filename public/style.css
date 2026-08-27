@@ -1145,3 +1145,31 @@ html, body, .app, .main{
   color: #fff;
   background: #d64545;
 }
+
+/* =========================
+   زر عرض النص الاحتياطي للرد الصوتي
+========================= */
+.voice-show-text-btn{
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.voice-show-text-btn:hover{ border-color: var(--accent); color: var(--accent); }
+
+.voice-text-reveal{
+  flex-basis: 100%;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+.voice-text-reveal.hidden{ display: none; }
